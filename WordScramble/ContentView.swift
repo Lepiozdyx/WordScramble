@@ -24,7 +24,12 @@ struct ContentView: View {
                         .textInputAutocapitalization(.never)
                 }
                 
-                Section {
+                Section("Your score: \(usedWords.flatMap { $0 }.count + usedWords.count)") {
+                    Text("Words count: \(usedWords.count)")
+                    Text("Letters count: \(usedWords.flatMap { $0 }.count)")
+                }
+                
+                Section(usedWords.isEmpty ? "" : "Your words") {
                     ForEach(usedWords, id: \.self) { word in
                         HStack {
                             Image(systemName: "\(word.count).circle")
@@ -39,12 +44,15 @@ struct ContentView: View {
             .alert(errorTitle, isPresented: $isShowingError) {} message: {
                 Text(errorMessage)
             }
+            .toolbar {
+                Button("new word", action: startGame)
+            }
         }
     }
     
     private func addNewWord() {
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard answer.count > 0 else { return }
+        guard answer.count > 2 else { return }
         
         guard isOriginal(word: answer) else {
             wordError(title: "Word used already", message: "Be more original")
@@ -52,12 +60,18 @@ struct ContentView: View {
         }
         
         guard isPossible(word: answer) else {
-            wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
+            wordError(
+                title: "Word not possible",
+                message: "You can't spell that word from '\(rootWord)'!"
+            )
             return
         }
         
         guard isReal(word: answer) else {
-            wordError(title: "Word not recognized", message: "You can't just make them up, you know!")
+            wordError(
+                title: "Word not recognized",
+                message: "You can't just make them up, you know!"
+            )
             return
         }
         
@@ -72,6 +86,8 @@ struct ContentView: View {
             if let startWords = try? String(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
                 rootWord = allWords.randomElement() ?? "scramble"
+                usedWords = []
+                newWord = ""
                 return
             }
         }
@@ -80,7 +96,7 @@ struct ContentView: View {
     }
     
     private func isOriginal(word: String) -> Bool {
-        !usedWords.contains(word)
+        !usedWords.contains(word) && rootWord != word
     }
     
     private func isPossible(word: String) -> Bool {
@@ -100,7 +116,13 @@ struct ContentView: View {
     private func isReal(word: String) -> Bool {
         let checker = UITextChecker()
         let range = NSRange(location: 0, length: word.utf16.count)
-        let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
+        let misspelledRange = checker.rangeOfMisspelledWord(
+            in: word,
+            range: range,
+            startingAt: 0,
+            wrap: false,
+            language: "en"
+        )
         
         return misspelledRange.location == NSNotFound
     }
